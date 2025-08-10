@@ -1,0 +1,5 @@
+aiogram
+langchain
+langchain-openai
+python-dateutil
+pydantic>=2
