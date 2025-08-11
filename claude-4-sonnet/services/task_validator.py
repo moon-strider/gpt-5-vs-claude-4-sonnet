@@ -66,9 +66,16 @@ class TaskValidator:
         if classification not in ["work", "personal"]:
             task["classification"] = "personal"
         
-        recurrence = task.get("recurrence", "").lower()
-        if recurrence and recurrence not in ["none", "daily", "weekly", "monthly", "yearly"]:
-            task["recurrence"] = "none"
+        recurrence = task.get("recurrence", "")
+        if recurrence:
+            recurrence_lower = recurrence.lower()
+            valid_basic_patterns = ["none", "daily", "weekly", "monthly", "yearly"]
+            is_weekly_pattern = recurrence_lower.startswith("weekly_")
+            
+            if recurrence_lower not in valid_basic_patterns and not is_weekly_pattern:
+                task["recurrence"] = "none"
+            else:
+                task["recurrence"] = recurrence
         
         if not task.get("description", "").strip():
             result["valid"] = False

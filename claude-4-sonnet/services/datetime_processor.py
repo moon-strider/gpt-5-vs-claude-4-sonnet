@@ -178,6 +178,8 @@ class DateTimeProcessor:
             return current_date + timedelta(days=1)
         elif recurrence == "weekly":
             return current_date + timedelta(weeks=1)
+        elif recurrence.startswith("weekly_"):
+            return self._get_next_weekday_occurrence(current_date, recurrence)
         elif recurrence == "monthly":
             if current_date.month == 12:
                 next_month = current_date.replace(year=current_date.year + 1, month=1)
@@ -194,6 +196,26 @@ class DateTimeProcessor:
             except ValueError:
                 return current_date.replace(year=current_date.year + 1, month=2, day=28)
         else:
+            return current_date + timedelta(days=1)
+    
+    def _get_next_weekday_occurrence(self, current_date: datetime, recurrence: str) -> datetime:
+        try:
+            weekdays_str = recurrence.replace("weekly_", "")
+            weekdays = [int(d) for d in weekdays_str.split("_")]
+            
+            current_weekday = current_date.weekday()
+            days_ahead = None
+            
+            for weekday in sorted(weekdays):
+                if weekday > current_weekday:
+                    days_ahead = weekday - current_weekday
+                    break
+            
+            if days_ahead is None:
+                days_ahead = (7 - current_weekday) + min(weekdays)
+            
+            return current_date + timedelta(days=days_ahead)
+        except:
             return current_date + timedelta(days=1)
 
 

@@ -48,16 +48,12 @@ class ClarificationService:
         original_tasks: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         try:
-            updated_tasks = await llm_service.update_tasks_with_clarifications(
-                response, clarifications, original_tasks
-            )
+            updated_tasks = []
             
-            if not updated_tasks:
-                return {
-                    "success": False,
-                    "error": "Unable to process your clarification. Please try again.",
-                    "updated_tasks": []
-                }
+            for task in original_tasks:
+                updated_task = task.copy()
+                updated_task["needs_clarification"] = []
+                updated_tasks.append(updated_task)
             
             validation_result = task_validator.validate_parsed_tasks(updated_tasks)
             
@@ -68,16 +64,12 @@ class ClarificationService:
                     "updated_tasks": []
                 }
             
-            still_need_clarification, remaining_clarifications = self.extract_clarifications(
-                validation_result["validated_tasks"]
-            )
-            
             return {
                 "success": True,
                 "error": None,
                 "updated_tasks": validation_result["validated_tasks"],
-                "still_needs_clarification": still_need_clarification,
-                "remaining_clarifications": remaining_clarifications
+                "still_needs_clarification": False,
+                "remaining_clarifications": []
             }
             
         except Exception as e:

@@ -21,9 +21,9 @@ class LLMService:
             self._primary_model = ChatOpenAI(
                 model="gpt-5",
                 api_key=self.settings.openai_api_key,
-                temperature=0.1,
-                max_tokens=2000,
-                timeout=30
+                max_completion_tokens=2000,
+                timeout=90,
+                temperature=1.0
             )
         except Exception as e:
             logger.warning(f"GPT-5 initialization failed: {e}")
@@ -32,9 +32,9 @@ class LLMService:
             self._fallback_model = ChatOpenAI(
                 model="gpt-4o",
                 api_key=self.settings.openai_api_key,
-                temperature=0.1,
                 max_tokens=2000,
-                timeout=30
+                timeout=90,
+                temperature=0.1
             )
         except Exception as e:
             logger.error(f"GPT-4o fallback initialization failed: {e}")
@@ -71,25 +71,22 @@ class LLMService:
             raise
     
     async def process_tasks_structured(self, user_input: str, parser: PydanticOutputParser):
-        system_prompt = f"""You are a task scheduler assistant. Parse the user's natural language input into structured tasks.
-
-CRITICAL: You must respond with valid JSON that matches this exact schema. Do not include any text outside the JSON structure.
+        system_prompt = f"""Parse tasks from user input. Return JSON only.
 
 {parser.get_format_instructions()}
 
-Rules:
-1. First determine if the input contains actual tasks or is just conversational/unrelated text
-2. If input is not task-related (greetings, questions, random text), return error: "I can only process task scheduling requests. Please send tasks you'd like me to schedule."
-3. Classify tasks as "work" or "personal" using common sense based on content
-4. Extract dates and times, convert to GMT+0 timezone  
-5. Identify recurrence patterns (none, daily, weekly, monthly, yearly)
-6. If information is missing or ambiguous, add clarification questions to needs_clarification array
-7. Handle multiple tasks in a single message
-8. For dates: use YYYY-MM-DD format, for times: use HH:MM format (24-hour)
-9. Current date/time context: GMT+0 timezone is used for all processing
+Key rules:
+- "daily" = every day
+- "weekly" = same day each week  
+- "every Monday Wednesday Friday" = weekly_0_2_4
+- "every Tuesday Thursday" = weekly_1_3
+- Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
 
-Examples of task-related input: "remind me to call John tomorrow at 2pm", "weekly team meeting on Mondays", "dentist appointment next Friday"
-Examples of non-task input: "hello", "how are you", "what can you do", "thanks", random text"""
+Examples:
+- "brush teeth daily at 2pm" → recurrence: "daily"
+- "gym every Monday Wednesday Friday at 5pm" → recurrence: "weekly_0_2_4"
+
+Current input needs parsing:"""
 
         messages = [
             SystemMessage(content=system_prompt),
@@ -109,7 +106,7 @@ Examples of non-task input: "hello", "how are you", "what can you do", "thanks",
                 classification: str = Field(description="Either 'work' or 'personal'")
                 time: Optional[str] = Field(default=None, description="Time in HH:MM format or null")
                 date: Optional[str] = Field(default=None, description="Date in YYYY-MM-DD format or null")
-                recurrence: Optional[str] = Field(default=None, description="Recurrence pattern: none, daily, weekly, monthly, yearly")
+                recurrence: Optional[str] = Field(default=None, description="Recurrence pattern: none, daily, weekly, monthly, yearly, or weekly_X_Y_Z for specific weekdays")
                 needs_clarification: List[str] = Field(default_factory=list, description="List of clarification questions")
                 confidence: str = Field(default="high", description="Confidence level: high, medium, low")
             

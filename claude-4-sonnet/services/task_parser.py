@@ -15,7 +15,7 @@ class TaskInfo(BaseModel):
     classification: str = Field(description="Either 'work' or 'personal'")
     time: Optional[str] = Field(default=None, description="Time in HH:MM format or null")
     date: Optional[str] = Field(default=None, description="Date in YYYY-MM-DD format or null")
-    recurrence: Optional[str] = Field(default=None, description="Recurrence pattern: none, daily, weekly, monthly, yearly")
+    recurrence: Optional[str] = Field(default=None, description="Recurrence pattern: none, daily, weekly, monthly, yearly, or weekly_X_Y_Z for specific weekdays")
     needs_clarification: List[str] = Field(default_factory=list, description="List of clarification questions")
     confidence: str = Field(default="high", description="Confidence level: high, medium, low")
 
