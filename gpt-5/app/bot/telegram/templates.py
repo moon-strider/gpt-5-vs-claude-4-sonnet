@@ -5,20 +5,20 @@ from ..scheduler.format import format_dt
 from datetime import datetime, date
 
 
-def _recurrence_summary(t: TaskExtract) -> str:
+def _recurrence_label(t: TaskExtract) -> str:
     if t.kind == "one_time":
-        return f"on {t.date} at {t.time}"
+        return f"On {t.date}"
     if t.kind == "daily":
-        return f"every day at {t.time}"
+        return "Daily"
     if t.kind == "weekday":
-        return f"every weekday at {t.time}"
+        return "Every weekday"
     if t.kind == "weekly":
-        days = ",".join(t.dow or [])
-        return f"on {days} at {t.time}"
+        days = ", ".join(t.dow or [])
+        return f"Every {days}"
     if t.kind == "every_n_days":
         a = t.date or "today"
-        return f"every {t.n_days} days at {t.time} (anchor {a})"
-    return "unsupported"
+        return f"Every {t.n_days} days (anchor {a})"
+    return "Unsupported"
 
 
 def build_clarifications(batch: List[TaskExtract]) -> str:
@@ -50,18 +50,24 @@ def build_clarifications(batch: List[TaskExtract]) -> str:
 
 def build_proposed_list(batch: List[TaskExtract]) -> str:
     lines = []
-    lines.append("Proposed Task List")
+    lines.append("📋 Parsed Tasks:")
     lines.append("")
     i = 1
     for t in batch:
-        lines.append(f"{i}) [{t.tag}] \"{t.name}\" — {_recurrence_summary(t)}")
+        lines.append(f"{i}. [{t.tag}] {t.name}")
+        if t.time:
+            lines.append(f"   - Time: {t.time} GMT")
+        else:
+            lines.append("   - Time: (missing)")
+        lines.append(f"   - Recurrence: {_recurrence_label(t)}")
+        lines.append("")
         i += 1
-    return "\n".join(lines)
+    return "\n".join(lines).rstrip()
 
 
 def build_final_schedule(batch: List[TaskExtract], now_utc: datetime, holidays: List[date], anchor_date: date) -> str:
     lines = []
-    lines.append("SCHEDULE (UTC)")
+    lines.append("📅 Next Occurrences:")
     lines.append("")
     i = 1
     hset = set(holidays)
@@ -72,10 +78,10 @@ def build_final_schedule(batch: List[TaskExtract], now_utc: datetime, holidays: 
             tt = TaskExtract(**{**t.model_dump(), "date": anchor_date.isoformat()})
         occ = next_occurrences(tt, now_utc, hset)
         if occ:
-            times = "; ".join([format_dt(x) for x in occ])
-            lines.append(f"   Next: {times}")
+            for dt in occ:
+                lines.append(f"   - Next: {format_dt(dt)}")
         else:
-            lines.append("   Next: (none)")
+            lines.append("   - Next: (none)")
         lines.append("")
         i += 1
     return "\n".join(lines).rstrip()

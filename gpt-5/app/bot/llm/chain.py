@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
 from langchain_openai import ChatOpenAI
+import os
 from langchain.schema import HumanMessage, SystemMessage
 from pydantic import ValidationError
 from .schemas import TaskExtract, TaskBatch
@@ -20,6 +21,9 @@ def _extract_json_array(text: str) -> str:
     return text
 
 
+MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+
 def extract_tasks(initial_text: str, session_messages: List[str], holidays: Dict[str, Any] | None, now_utc: datetime, max_tokens: int):
     context_parts = [initial_text] + session_messages
     if holidays is not None:
@@ -31,7 +35,7 @@ def extract_tasks(initial_text: str, session_messages: List[str], holidays: Dict
     if _approx_tokens(ctx) > max_tokens:
         return "CONTEXT_TOO_LARGE"
 
-    model = ChatOpenAI(model="gpt-5", temperature=0)
+    model = ChatOpenAI(model=MODEL_NAME, temperature=0)
     messages = [
         SystemMessage(content=EXTRACTION_SYSTEM),
         HumanMessage(content=f"Now(UTC): {now_utc.isoformat()}\n\nInput:\n{ctx}\n\nReturn only JSON array."),
@@ -43,7 +47,7 @@ def extract_tasks(initial_text: str, session_messages: List[str], holidays: Dict
         batch = TaskBatch.validate_python(data)
         return batch
     except Exception as e:
-        repair_model = ChatOpenAI(model="gpt-5", temperature=0)
+        repair_model = ChatOpenAI(model=MODEL_NAME, temperature=0)
         repair_messages = [
             SystemMessage(content=SELF_REPAIR_SYSTEM),
             HumanMessage(content=f"Error: {str(e)}\n\nJSON to fix:\n{text}"),
@@ -60,7 +64,7 @@ def extract_tasks(initial_text: str, session_messages: List[str], holidays: Dict
 
 def classify_tasks(batch: List[TaskExtract]) -> List[TaskExtract]:
     items = [{"id": t.id, "name": t.name, "raw": t.raw} for t in batch]
-    model = ChatOpenAI(model="gpt-5", temperature=0)
+    model = ChatOpenAI(model=MODEL_NAME, temperature=0)
     messages = [
         SystemMessage(content=CLASSIFY_SYSTEM),
         HumanMessage(content=json.dumps(items)),
@@ -84,4 +88,3 @@ def classify_tasks(batch: List[TaskExtract]) -> List[TaskExtract]:
         tag = mapping.get(t.id, t.tag)
         out.append(TaskExtract(**{**t.model_dump(), "tag": tag}))
     return out
-

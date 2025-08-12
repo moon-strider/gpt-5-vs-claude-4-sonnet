@@ -21,15 +21,13 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-.env
-.env.local
-.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
 
 logs/
 *.log
 
-.DS_Store
+**/.DS_Store
 .vscode/
 .idea/
-
-node_modules/

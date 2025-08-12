@@ -1,0 +1,22 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    image: gpt5-bot:latest
+    environment:
+      - APP_TZ=UTC
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MAX_PROMPT_TOKENS=${MAX_PROMPT_TOKENS:-24000}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import infra.healthcheck as h; print(h.ok())' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
